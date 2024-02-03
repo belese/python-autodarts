@@ -106,9 +106,7 @@ class AutoDartSession:
         aiohttp.ClientResponse: The response object.
         """
         headers.update(await self.headers())
-        a=  await self.session.get(url, *args, headers=headers, **kwargs)
-        print(await a.json())
-        return a
+        return await self.session.get(url, *args, headers=headers, **kwargs)
         
     async def post(self, url: str, headers: dict = {}, *args, **kwargs) -> aiohttp.ClientResponse:
         """
