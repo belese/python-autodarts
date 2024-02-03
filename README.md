@@ -27,7 +27,8 @@ The AutoDarts Python library is an unofficial implementation for interacting wit
 ## Installation
 
 ```bash
-pip install autodarts
+python3 -m build
+pip install dist/autodarts-0.0.1-py3-none-any.whl
 ```
 
 ## Usage
