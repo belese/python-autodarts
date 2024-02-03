@@ -37,7 +37,7 @@ pip install dist/autodarts-0.0.1-py3-none-any.whl
 ```python
 
 # Initialize AutoDartSession
-from autodarts import AutoDartSession
+from autodarts import AutoDartSession, CloudBoard
 
 #create the session
 session = AutoDartSession(
