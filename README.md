@@ -36,7 +36,7 @@ pip install autodarts
 ```python
 
 # Initialize AutoDartSession
-from autodarts import AutoDartSession
+from autodarts import AutoDartSession, CloudBoard
 
 #create the session
 session = AutoDartSession(
