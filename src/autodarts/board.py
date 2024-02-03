@@ -128,7 +128,6 @@ class CloudBoard(AutoDartEndpointWs):
 
     async def async_get_match(self) -> Optional["Match"]:
         """Get the Match object associated with the dartboard."""
-        print (self._state)
         if not self.match_id :
             return
         else :
