@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling","aiohttp==3.9.3", "python-keycloak-async==2.17.1","asyncio-atexit==1.0.1", "requests"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autodarts"
+version = "0.0.1"
+authors = [
+  { name="belese"},
+]
+description = "A unoficial async autodarts web api binding"
+readme = "README.md"
+requires-python = ">=3.8"
+requires = ["aiohttp==3.9.3", "python-keycloak-async==2.17.1","asyncio-atexit==1.0.1", "requests"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/belese/python-autodarts"
+Issues = "https://github.com/belese/python-autodarts/issues"

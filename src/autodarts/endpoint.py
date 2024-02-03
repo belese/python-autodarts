@@ -1,0 +1,232 @@
+from typing import Any, Awaitable, Callable, Dict, Optional
+from collections import defaultdict
+import asyncio
+import aiohttp
+from .session import AutoDartSession, AutoDartException
+from posixpath import join as urljoin
+
+
+class AutoDartMissingIdException(AutoDartException):
+    pass
+
+class AutoDartInvalidStateException(AutoDartException):
+    pass
+
+class AutoDartBase:
+    """
+    Represents the base class for AutoDARTS entities.
+    """
+    def __init__(self, state: Dict[str, Any], session: Optional[AutoDartSession] = None) -> None:
+        """
+        Initialize an AutoDartBase instance.
+
+        Parameters:
+        - state (dict): The initial state of the entity.
+        - session (AutoDartSession): The session used for communication.
+
+        Returns:
+        None
+        """
+        print('init', state)
+        self._state = state
+        self.session = session
+    
+   
+class AutoDartEndpoint(AutoDartBase):
+    """
+    Represents an endpoint in the AutoDARTS system.
+    """
+    API_URL = "https://api.autodarts.io"
+
+    ENDPOINT = None
+    
+    def __init__(self, state: Dict[str, Any], session: AutoDartSession, endpoint: str, api_url: str = API_URL) -> None:
+        """
+        Initialize an AutoDartEndpoint instance.
+
+        Parameters:
+        - state (dict): The initial state of the entity.
+        - session (AutoDartSession): The session used for communication.
+        - endpoint (str): The API endpoint for the entity.
+        - api_url (str): The base API URL.
+
+        Raises:
+        - AutoDartMissingIdException: If the entity's state lacks an 'id'.
+
+        Returns:
+        None
+        """
+        if not state or not state.get('id'):
+            raise AutoDartMissingIdException(f"Can't init {self.__class__.__name__} without id in state")
+        super().__init__(state, session=session)
+        self.collection_endpoint = endpoint
+        self.api_url = api_url
+    
+    def __await__(self):
+        self.async_load_state().__await__()
+        return self
+    
+    @property	
+    def id(self) -> str | None:
+        """Get the ID of the entity."""
+        return self._state.get('id')
+    
+    def get_endpoint(self, *args: [str]) -> str:
+        """Get the full API endpoint for the entity."""
+        return urljoin(self.api_url, self.collection_endpoint, self.id, *args) 
+
+    async def async_load_state(self):
+        """Asynchronously load the state of the entity."""
+        self._state.update(await (await self.session.get(self.get_endpoint(), timeout=10)).json())
+    
+    @classmethod
+    async def from_id(cls, session: AutoDartSession, id: str) -> "AutoDartEndpoint":
+        """Create an instance of the entity from its ID."""
+        endpoint = urljoin(cls.API_URL, cls.ENDPOINT, id)
+        state = await session.get(endpoint)
+        return cls(state=await state.json(),session=session)
+    
+    @classmethod
+    async def factory(cls, session: AutoDartSession):
+        """Create instances of the entity using a factory method."""
+        endpoint = urljoin(cls.API_URL, cls.ENDPOINT)
+        states = await session.get(endpoint)
+        for state in await states.json():
+            yield cls(state, session=session)
+
+
+class AutoDartEndpointWs(AutoDartEndpoint):
+    """
+    Represents an endpoint with WebSocket support in the AutoDARTS system.
+    """
+    WS_ENDPOINT = "wss://api.autodarts.io/ms/v0/subscribe"
+
+    event_topics = [
+        "state",
+        "event"
+    ]
+    
+    events = [
+    ]
+
+    def __init__(self, state: Dict[str, Any], session: AutoDartSession, endpoint: str, channel: str,
+                 ws_url: str = WS_ENDPOINT, api_url: str = AutoDartEndpoint.API_URL) -> None:
+        """
+        Initialize an AutoDartEndpointWs instance.
+
+        Parameters:
+        - state (dict): The initial state of the entity.
+        - session (AutoDartSession): The session used for communication.
+        - endpoint (str): The API endpoint for the entity.
+        - channel (str): The WebSocket channel.
+        - ws_url (str): The WebSocket URL.
+        - api_url (str): The base API URL.
+
+        Returns:
+        None
+        """
+        super().__init__(state, session, endpoint, api_url=api_url)
+        self.ws = None
+        self.channel = channel
+        self.last_event = None
+        self.task = None
+        self.ws_url = ws_url
+        self.event_cb = {
+            "state" : defaultdict(list),
+            "event" : defaultdict(list)
+        }
+
+    @property
+    def state_topic(self) -> str:
+        """Get the state topic for the entity."""
+        return self.id + ".state"
+    
+    @property
+    def event_topic(self) -> str:
+        """Get the event topic for the entity."""
+        return self.id + ".event"
+    
+    def connect(self, on_event_cb=None, on_state_cb=None) -> None:
+        """Connect to the WebSocket channel."""
+        print('Register task')
+        self.task = asyncio.create_task(
+            self.async_messages_task(on_event_cb, on_state_cb)
+        )
+       
+    def disconnect(self) -> None:
+        """Disconnect from the WebSocket channel."""
+        print('Cancel task')
+        self.task.cancel()
+
+    async def async_messages_task(self, on_event_cb=None, on_state_cb=None) -> None:
+        """Asynchronously handle messages from the WebSocket channel."""
+        print('Connect to ws', self.ws_url, self.session.headers)
+        try:
+            async with self.session.session.ws_connect(url=self.ws_url, headers=await self.session.headers()) as ws:
+                print('Connected to ws', ws)
+                await self._subscribe_channel(ws, self.state_topic)
+                await self._subscribe_channel(ws, self.event_topic)
+                print('subscribed to ws and waiting message')
+                async for msg in ws:
+                    print('received message', msg)
+                    if msg.type == aiohttp.WSMsgType.TEXT:
+                        msg = msg.json()
+                        topic = msg['topic'] 
+                        if  topic == "info" :
+                            continue
+                        elif topic == self.state_topic :
+                            await self.on_state_message(msg["data"])
+                            if on_state_cb :
+                                await on_state_cb(msg["data"])
+                        elif topic == self.event_topic :
+                            await self.on_event_message(msg["data"])
+                            if on_event_cb :
+                                await on_event_cb(msg["data"])
+                    elif msg.type == aiohttp.WSMsgType.ERROR:
+                        print('ws connection closed with exception %s' % ws.exception())
+                        break
+                    elif msg.type == aiohttp.WSMsgType.CLOSED:
+                        print('ws connection closed')
+                        break
+                    else:
+                        print('ws connection closed')
+                        break
+        except asyncio.CancelledError:
+            print('Task cancelled')
+        finally:
+            print('Task finished')
+
+    async def _subscribe_channel(self, ws, topic) -> None:
+        """Subscribe to a WebSocket channel."""
+        await ws.send_json(
+            {
+                "type": "subscribe",
+                "channel": self.channel,
+                "topic" : topic
+            }
+        )
+    
+    async def on_state_message(self, data) -> None:
+        """Handle state messages from the WebSocket channel."""
+        self._state.update(data)
+        if event:= data.get("event") :
+            for cb in self.event_cb["state"][event]:
+                await cb(data)
+       
+    async def on_event_message(self, data) -> None:
+        """Handle event messages from the WebSocket channel."""
+        self.last_event = data
+        if event := data.get("event") :
+            for cb in self.event_cb["event"][event]:
+                await cb(data)
+    
+    def register_callback(self, event, cb, topic="state") -> Callable[[], None]:
+        """Register a callback for a specific event and topic."""
+        if event not in self.events :
+            raise AutoDartInvalidStateException(f"Event not supported, allowed events are {','.join(self.events)}")        
+        if topic not in self.event_topics :
+            raise AutoDartInvalidStateException(f"Topic not supported, allowed topics are {','.join(self.event_topics)}")
+        self.event_cb[topic][event].append(cb)
+        def unregister() -> None:
+            self.event_cb[topic][event].remove(cb)
+        return unregister
