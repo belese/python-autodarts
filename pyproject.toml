@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling","aiohttp", "python-keycloak-async","asyncio-atexit", "requests"]
+requires = ["hatchling","aiohttp", "python-keycloak","asyncio-atexit", "requests"]
 build-backend = "hatchling.build"
 
 [project]
