@@ -1,5 +1,5 @@
 import aiohttp
-#import asyncio_atexit
+import asyncio_atexit
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakGetError
 import datetime
@@ -45,7 +45,7 @@ class AutoDartSession:
 
         self.session: aiohttp.ClientSession = aiohttp.ClientSession(*args, **kwargs)
         self._token: dict = None
-        #asyncio_atexit.register(self.session.close)
+        asyncio_atexit.register(self.session.close)
 
     async def token(self) -> dict:
         """
