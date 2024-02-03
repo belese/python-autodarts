@@ -222,8 +222,8 @@ class AutoDartEndpointWs(AutoDartEndpoint):
     
     def register_callback(self, event, cb, topic="state") -> Callable[[], None]:
         """Register a callback for a specific event and topic."""
-        if event not in self.events :
-            raise AutoDartInvalidStateException(f"Event not supported, allowed events are {','.join(self.events)}")        
+        #if event not in self.events :
+        #    raise AutoDartInvalidStateException(f"Event not supported, allowed events are {','.join(self.events)}")        
         if topic not in self.event_topics :
             raise AutoDartInvalidStateException(f"Topic not supported, allowed topics are {','.join(self.event_topics)}")
         self.event_cb[topic][event].append(cb)
