@@ -62,7 +62,7 @@ class AutoDartSession:
             seconds=(int(self._token["expires_in"]) if self._token else 0) - 10
         ) < datetime.datetime.now():
             try:
-                self._token = await asyncio.to_thread(keycloak_openid.token,self.email, self.password)
+                self._token = await asyncio.to_thread(self.keycloak_openid.token,self.email, self.password)
             except KeycloakAuthenticationError as err:
                 raise AutoDartAuthenticationException("Authentication failed") from err
         return self._token["access_token"]
