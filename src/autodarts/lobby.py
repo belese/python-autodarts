@@ -45,12 +45,12 @@ class Lobby(AutoDartEndpointWs):
         super().__init__(session, endpoint, channel, on_state_cb=on_state_cb, on_event_cb=on_event_cb, ws_url=ws_url)
     
     @property
-    def createdAt(self) -> Optional[str]:
+    def created_at(self) -> Optional[str]:
         """Get the creation timestamp of the lobby."""
         return self._state.get("createdAt")
     
     @property
-    def isPrivate(self) -> Optional[bool]:
+    def is_private(self) -> Optional[bool]:
         """Check if the lobby is private."""
         return self._state.get("isPrivate")
     
@@ -65,22 +65,22 @@ class Lobby(AutoDartEndpointWs):
         return self._state.get("settings")
     
     @property
-    def bullOffMode(self) -> Optional[Any]:
+    def bull_off_mode(self) -> Optional[Any]:
         """Get the bull-off mode of the lobby."""
         return self._state.get("bullOffMode")
     
     @property
-    def hostId(self) -> Optional[Any]:
+    def host_id(self) -> Optional[Any]:
         """Get the ID of the host of the lobby."""
         return self._state.get("hostId")
     
     @property
     def host(self) -> Host:
         """Get the host object representing the host of the lobby."""
-        return Host(self.session, self._state.get("host"))
+        return Host(self._state.get("host"),self.session)
     
     @property
-    def maxPlayers(self) -> Optional[Any]:
+    def max_players(self) -> Optional[Any]:
         """Get the maximum number of players allowed in the lobby."""
         return self._state.get("maxPlayers")
     

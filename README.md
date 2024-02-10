@@ -68,7 +68,7 @@ async def on_board_connected(msg):
     print("Board connected : ", msg)
     await asyncio.sleep(1)
        
-unregister_handler = cloud_board.register_callback( "Connected",  on_board_connected )
+unregister_handler = cloud_board.register_callback(on_board_connected, "Connected")
 
 #unregister
 unregister_handler()
@@ -78,4 +78,8 @@ cloud_board.disconnect()
 
 ```
 See example folder for a more detailled example
+
+
+
+MAny thanks to TmO for autodarts software, and Wusssa for it's caller and let me borrow some code
 

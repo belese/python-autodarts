@@ -3,6 +3,9 @@ from typing import Optional, List
 from .endpoint import AutoDartEndpointWs, AutoDartBase, AutoDartEndpoint
 from .session import AutoDartSession
 
+import logging
+
+logger = logging.getLogger(__name__)
 class OpponentBoard(AutoDartBase):
     """
     Represents an opponent's dartboard.
@@ -114,6 +117,8 @@ class CloudBoard(AutoDartEndpointWs):
     @property
     def state(self) -> str:
         """Get the state of the dartboard."""
+        if not self._state.get("state") :
+            self._state['state'] = {}
         return self._state["state"]
 
     @property
@@ -132,6 +137,20 @@ class CloudBoard(AutoDartEndpointWs):
             return
         else :
             return await Match.from_id(self.session,self.match_id)
+
+    async def async_load(self):
+        """Asynchronously load the state of the entity."""
+        await self.async_load_data()
+    
+    async def async_load_data(self):
+        """Asynchronously load the state of the entity."""
+        board = await self.__class__.from_id(self.session,self.id)
+        self._state.update(board._state)
+    
+    async def async_load_state(self):
+        """Asynchronously load the state of the entity."""
+        if self.state.get('connected') :
+            self._state["state"].update(await (await self.session.get(self.get_endpoint("state"), timeout=10)).json())
     
     async def async_start(self) -> None:
         """Start the dartboard."""
@@ -145,12 +164,11 @@ class CloudBoard(AutoDartEndpointWs):
         """Reset the dartboard."""
         await self.session.put(self.get_endpoint("reset"))
     
-    async def on_state_message(self, data) -> None:
-        """Handle state messages from the WebSocket channel."""
-        self._state['state'].update(data)
-        if event:= data.get("event") :
-            for cb in self.event_cb["state"][event]:
-                await cb(data)
+    @classmethod
+    async def from_id(cls, session: AutoDartSession, id: str) -> "AutoDartEndpoint":
+        """Create an instance of the entity from its ID."""
+        async for board in cls.factory(session) :
+            if board.id == id :
+                return board
     
-
 from .match import Match

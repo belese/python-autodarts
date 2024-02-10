@@ -35,7 +35,7 @@ async def main():
         match = await cloud_board.async_get_match()
         if match is not None: 
             print("Variant: ", match.variant)
-            print("First Player: ", next(match.players).name) 
+            print("First Player: ", match.players[0].name) 
             #Connecting an Autodart object will keep state updated with websocket events, and you could register call back too
             match.connect()
             await asyncio.sleep(5)
@@ -65,7 +65,7 @@ async def main():
             print("Board connected : ", msg)
             await asyncio.sleep(1)
        
-        unregister_handler = cloud_board.register_callback("Connected", on_board_connected)
+        unregister_handler = cloud_board.register_callback(on_board_connected, "Connected")
 
         await asyncio.sleep(12225)
         unregister_handler()

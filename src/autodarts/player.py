@@ -28,7 +28,7 @@ class Player(AutoDartBase):
         return self._state.get("index")
 
     @property
-    def userId(self) -> Optional[str]:
+    def user_id(self) -> Optional[str]:
         """Get the user ID associated with the player."""
         return self._state.get("userId")
 
@@ -43,12 +43,12 @@ class Player(AutoDartBase):
         return self._state.get("name")
 
     @property
-    def avatarUrl(self) -> Optional[str]:
+    def avatar_url(self) -> Optional[str]:
         """Get the URL of the player's avatar."""
         return self._state.get("avatarUrl")
 
     @property
-    def hostId(self) -> Optional[str]:
+    def host_id(self) -> Optional[str]:
         """Get the host ID associated with the player."""
         return self._state.get("hostId")
 
@@ -58,17 +58,17 @@ class Player(AutoDartBase):
         return Host(self.session, self._state.get("host"))
 
     @property
-    def boardId(self) -> Optional[str]:
+    def board_id(self) -> Optional[str]:
         """Get the board ID associated with the player."""
         return self._state.get("boardId")
 
     @property
     def board(self) -> "OpponentBoard":
         """Get the opponent board object representing the player's board."""
-        return OpponentBoard(self.boardId, self.boardName)
+        return OpponentBoard(self.board_id, self.boardName)
 
     @property
-    def boardName(self) -> Optional[str]:
+    def board_name(self) -> Optional[str]:
         """Get the name of the player's board."""
         return self._state.get("boardName")
 

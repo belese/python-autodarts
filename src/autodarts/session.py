@@ -3,7 +3,11 @@ import asyncio
 import atexit
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakGetError
-import datetime
+import time
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AutoDartException(Exception):
     pass
@@ -41,13 +45,27 @@ class AutoDartSession:
             client_id=client_id,
             realm_name=realm_name,
             client_secret_key=client_secret_key,
-            verify=False,
+            #verify=False,
         )
 
         self.session: aiohttp.ClientSession = aiohttp.ClientSession(*args, **kwargs)
         self._token: dict = None
+        self.next_refresh = 0
         atexit.register(self.session.close)
 
+    async def refresh_token(self) :
+        if time.time() < self.next_refresh  : 
+            try:
+                self._token = await asyncio.to_thread(self.keycloak_openid.refresh_token,self._token['refresh_token'])
+            except KeycloakAuthenticationError as err:
+                raise AutoDartAuthenticationException("Authentication failed") from err
+        else :
+            try:
+                self._token = await asyncio.to_thread(self.keycloak_openid.token,self.email, self.password)
+            except KeycloakAuthenticationError as err:
+                raise AutoDartAuthenticationException("Authentication failed") from err
+        self.next_refresh = time.time() + self._token["expires_in"]
+    
     async def token(self) -> dict:
         """
         Get the authentication token.
@@ -58,13 +76,9 @@ class AutoDartSession:
         Raises:
         AutoDartAuthenticationException: If authentication fails.
         """
-        if datetime.datetime.now() + datetime.timedelta(
-            seconds=(int(self._token["expires_in"]) if self._token else 0) - 10
-        ) < datetime.datetime.now():
-            try:
-                self._token = await asyncio.to_thread(self.keycloak_openid.token,self.email, self.password)
-            except KeycloakAuthenticationError as err:
-                raise AutoDartAuthenticationException("Authentication failed") from err
+        if time.time() - 10 > self.next_refresh  :
+            await self.refresh_token() 
+            
         return self._token["access_token"]
     
     async def is_authenticated(self) -> bool:
@@ -107,6 +121,8 @@ class AutoDartSession:
         """
         headers.update(await self.headers())
         return await self.session.get(url, *args, headers=headers, **kwargs)
+        #logger.error(await a.content.read())
+        #return a
         
     async def post(self, url: str, headers: dict = {}, *args, **kwargs) -> aiohttp.ClientResponse:
         """
