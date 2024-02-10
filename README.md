@@ -49,7 +49,7 @@ session = AutoDartSession(
 )
 
 #get the cloud board from its id
-cloud_board = await CloudBoard.from_id( sessions, BOARD_ID )
+cloud_board = await CloudBoard.from_id( session, BOARD_ID )
 
 # Connect to events 
 cloud_board.connect() 
