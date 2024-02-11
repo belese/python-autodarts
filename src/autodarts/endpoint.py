@@ -29,7 +29,6 @@ class AutoDartBase:
         Returns:
         None
         """
-        print('init', state)
         self._state = state
         self.session = session
     
@@ -150,6 +149,10 @@ class AutoDartEndpointWs(AutoDartEndpoint):
         self.async_event_cb = { name: defaultdict(list) for name in self.event_topics }
 
     @property
+    def connected(self) :
+        return True if self.task and not self.task.done() else False 
+    
+    @property
     def state_topic(self) -> str:
         """Get the state topic for the entity."""
         return self.id + ".state"
@@ -161,26 +164,21 @@ class AutoDartEndpointWs(AutoDartEndpoint):
         
     def connect(self, on_event_cb=None, on_state_cb=None) -> None:
         """Connect to the WebSocket channel."""
-        print('Register task')
         self.task = asyncio.create_task(
             self.async_messages_task(on_event_cb, on_state_cb)
         )
-       
+
     def disconnect(self) -> None:
         """Disconnect from the WebSocket channel."""
-        print('Cancel task')
         self.task.cancel()
         self.task = None
 
     async def async_messages_task(self, on_event_cb=None, on_state_cb=None) -> None:
         """Asynchronously handle messages from the WebSocket channel."""
-        print('Connect to ws', self.ws_url, self.session.headers)
         try:
             async with self.session.session.ws_connect(url=self.ws_url, headers=await self.session.headers()) as ws:
-                print('Connected to ws', ws)
                 await self._subscribe_channel(ws, self.state_topic)
                 await self._subscribe_channel(ws, self.event_topic)
-                print('subscribed to ws and waiting message')
                 async for msg in ws: 
                     if msg.type == aiohttp.WSMsgType.TEXT:
                         msg = msg.json()
@@ -196,16 +194,18 @@ class AutoDartEndpointWs(AutoDartEndpoint):
                             if on_event_cb :
                                 await on_event_cb(msg["data"])
                     elif msg.type == aiohttp.WSMsgType.ERROR:
-                        self.on_event_message({'event' : 'error', 'data' : ws.exception()})
+                        await self.on_event_message({'event' : 'error', 'data' : ws.exception()})
                         logger.error('ws connection closed with exception %s' % ws.exception())
                         break
                     elif msg.type == aiohttp.WSMsgType.CLOSED:
-                        self.on_event_message({'event' : 'disconnected'})
+                        await self.on_event_message({'event' : 'disconnected'})
                         break
         except asyncio.CancelledError:
             pass
         except Exception as e :
             logger.exception(f'Uncatch exception in wait msg {e}')
+        finally :
+            await self.on_event_message({'event' : 'task_ended'})
 
     async def _subscribe_channel(self, ws, topic) -> None:
         """Subscribe to a WebSocket channel."""
