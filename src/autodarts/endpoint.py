@@ -149,7 +149,8 @@ class AutoDartEndpointWs(AutoDartEndpoint):
         self.async_event_cb = { name: defaultdict(list) for name in self.event_topics }
 
     @property
-    def connected(self) :
+    def is_connected(self) :
+        logger.warning(f'Get connected task in lib : {self.task}, task done {None if not self.task else self.task.done()}, connected : {True if self.task and not self.task.done() else False}')
         return True if self.task and not self.task.done() else False 
     
     @property

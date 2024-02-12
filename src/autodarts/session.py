@@ -121,8 +121,6 @@ class AutoDartSession:
         """
         headers.update(await self.headers())
         return await self.session.get(url, *args, headers=headers, **kwargs)
-        #logger.error(await a.content.read())
-        #return a
         
     async def post(self, url: str, headers: dict = {}, *args, **kwargs) -> aiohttp.ClientResponse:
         """
