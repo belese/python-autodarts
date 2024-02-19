@@ -203,7 +203,8 @@ class AutoDartEndpointWs(AutoDartEndpoint):
         except asyncio.CancelledError:
             pass
         except Exception as e :
-            logger.exception(f'Uncatch exception in wait msg {e}')
+            await self.on_event_message({'event' : 'error', 'data' : e})
+            logger.warning(f'Uncatch exception in wait msg {e}')
         finally :
             await self.on_event_message({'event' : 'task_ended'})
 
