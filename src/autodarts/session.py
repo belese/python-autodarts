@@ -57,9 +57,12 @@ class AutoDartSession:
     def close(self):
         """Explicitly close the session."""
         if self.session:
-            # Close the session explicitly when unloading or stopping
-            asyncio.create_task(self.session.close())
-            self.session = None  # Ensure the session is cleaned up
+            logger.info("Schließe die Session...")
+            asyncio.create_task(self.session.close())  
+            self.session = None  
+            logger.info("Session erfolgreich geschlossen.")
+        else:
+            logger.warning("Die Session wurde bereits geschlossen oder existiert nicht.")
 
     async def refresh_token(self) :
         if time.time() < self.next_refresh  : 
