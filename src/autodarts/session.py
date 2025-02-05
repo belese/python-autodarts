@@ -51,7 +51,15 @@ class AutoDartSession:
         self.session: aiohttp.ClientSession = aiohttp.ClientSession(*args, **kwargs)
         self._token: dict = None
         self.next_refresh = 0
+        # Register to close the session when the program ends (for atexit)
         atexit.register(self.session.close)
+
+    def close(self):
+        """Explicitly close the session."""
+        if self.session:
+            # Close the session explicitly when unloading or stopping
+            asyncio.create_task(self.session.close())
+            self.session = None  # Ensure the session is cleaned up
 
     async def refresh_token(self) :
         if time.time() < self.next_refresh  : 
