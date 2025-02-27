@@ -53,6 +53,12 @@ class AutoDartSession:
         self.next_refresh = 0
         atexit.register(self.session.close)
 
+    def close(self):
+        """Explicitly close the session."""
+        if self.session:
+            asyncio.create_task(self.session.close())
+            self.session = None
+
     async def refresh_token(self) :
         if time.time() < self.next_refresh  : 
             try:
